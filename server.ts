@@ -14,8 +14,11 @@ db.pragma('foreign_keys = ON');
 db.exec(`
   CREATE TABLE IF NOT EXISTS staff (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    shift TEXT NOT NULL -- 'morning', 'afternoon', or 'oncall'
+    name TEXT NOT NULL UNIQUE,
+    shift TEXT NOT NULL, -- 'morning', 'afternoon', or 'oncall'
+    password TEXT NOT NULL DEFAULT '1234',
+    role TEXT NOT NULL DEFAULT 'staff', -- 'admin' or 'staff'
+    needs_password_change INTEGER DEFAULT 1 -- 1 for true, 0 for false
   );
 
   CREATE TABLE IF NOT EXISTS sectors (
@@ -35,92 +38,95 @@ db.exec(`
 
 // Seed data
 const seedData = () => {
-  const staffCount = db.prepare("SELECT COUNT(*) as count FROM staff").get() as { count: number };
-  
-  // We force a reset as requested by the user: "Apague funcionários e setores cadastrados anteriormente"
-  // To avoid doing this every restart, we could check a flag, but the user was explicit.
-  // I will wipe and refill to ensure the pattern is exactly as requested.
-  
   db.transaction(() => {
-    db.prepare("DELETE FROM missed_visits").run();
-    db.prepare("DELETE FROM sectors").run();
-    db.prepare("DELETE FROM staff").run();
+    // Check if we already have an admin
+    const adminExists = db.prepare("SELECT COUNT(*) as count FROM staff WHERE role = 'admin'").get() as { count: number };
+    
+    if (adminExists.count === 0) {
+      // Clear and re-seed if no admin (initial setup)
+      db.prepare("DELETE FROM missed_visits").run();
+      db.prepare("DELETE FROM sectors").run();
+      db.prepare("DELETE FROM staff").run();
 
-    const insertStaff = db.prepare("INSERT INTO staff (name, shift) VALUES (?, ?)");
-    const insertSector = db.prepare("INSERT INTO sectors (name, staff_id) VALUES (?, ?)");
+      const insertStaff = db.prepare("INSERT INTO staff (name, shift, role, password, needs_password_change) VALUES (?, ?, ?, ?, ?)");
+      const insertSector = db.prepare("INSERT INTO sectors (name, staff_id) VALUES (?, ?)");
 
-    // 1. Create Staff
-    const staff = [
-      { name: "Nayana", shift: "morning" },
-      { name: "Cleonice", shift: "morning" },
-      { name: "Juliana", shift: "afternoon" },
-      { name: "Shirley", shift: "afternoon" },
-      { name: "Plantonista", shift: "oncall" }
-    ];
+      // 1. Create Admin
+      insertStaff.run("Administrador", "morning", "admin", "1234", 1);
 
-    const staffIds: Record<string, number | bigint> = {};
-    staff.forEach(s => {
-      const info = insertStaff.run(s.name, s.shift);
-      staffIds[s.name] = info.lastInsertRowid;
-    });
+      // 2. Create Staff
+      const staff = [
+        { name: "Nayana", shift: "morning" },
+        { name: "Cleonice", shift: "morning" },
+        { name: "Juliana", shift: "afternoon" },
+        { name: "Shirley", shift: "afternoon" },
+        { name: "Plantonista", shift: "oncall" }
+      ];
 
-    // 2. Create Sectors
-    const sectorsData = [
-      // Nayana (Morning)
-      { name: "Sala Verde", staff: "Nayana" },
-      { name: "EP", staff: "Nayana" },
-      { name: "UTI 3", staff: "Nayana" },
-      { name: "UC1", staff: "Nayana" },
-      { name: "Necrotério", staff: "Nayana" },
-      { name: "P3", staff: "Nayana" },
-      { name: "P6", staff: "Nayana" },
-      { name: "P9", staff: "Nayana" },
-      { name: "P11(229,230,231,232)", staff: "Nayana" },
+      const staffIds: Record<string, number | bigint> = {};
+      staff.forEach(s => {
+        const info = insertStaff.run(s.name, s.shift, "staff", "1234", 1);
+        staffIds[s.name] = info.lastInsertRowid;
+      });
 
-      // Cleonice (Morning)
-      { name: "Sala Vermelha", staff: "Cleonice" },
-      { name: "UTI 1", staff: "Cleonice" },
-      { name: "UTI 4", staff: "Cleonice" },
-      { name: "UC2", staff: "Cleonice" },
-      { name: "P1", staff: "Cleonice" },
-      { name: "P4", staff: "Cleonice" },
-      { name: "P7", staff: "Cleonice" },
-      { name: "P11 (236,237, LEITOS EXTRAS)", staff: "Cleonice" },
+      // 3. Create Sectors
+      const sectorsData = [
+        // Nayana (Morning)
+        { name: "Sala Verde", staff: "Nayana" },
+        { name: "EP", staff: "Nayana" },
+        { name: "UTI 3", staff: "Nayana" },
+        { name: "UC1", staff: "Nayana" },
+        { name: "Necrotério", staff: "Nayana" },
+        { name: "P3", staff: "Nayana" },
+        { name: "P6", staff: "Nayana" },
+        { name: "P9", staff: "Nayana" },
+        { name: "P11(229,230,231,232)", staff: "Nayana" },
 
-      // Juliana (Afternoon)
-      { name: "Sala Verde", staff: "Juliana" },
-      { name: "EP", staff: "Juliana" },
-      { name: "UTI 3", staff: "Juliana" },
-      { name: "UC1", staff: "Juliana" },
-      { name: "Necrotério", staff: "Juliana" },
-      { name: "P3", staff: "Juliana" },
-      { name: "P6", staff: "Juliana" },
-      { name: "P9", staff: "Juliana" },
-      { name: "P11 (233,234,235)", staff: "Juliana" },
+        // Cleonice (Morning)
+        { name: "Sala Vermelha", staff: "Cleonice" },
+        { name: "UTI 1", staff: "Cleonice" },
+        { name: "UTI 4", staff: "Cleonice" },
+        { name: "UC2", staff: "Cleonice" },
+        { name: "P1", staff: "Cleonice" },
+        { name: "P4", staff: "Cleonice" },
+        { name: "P7", staff: "Cleonice" },
+        { name: "P11 (236,237, LEITOS EXTRAS)", staff: "Cleonice" },
 
-      // Shirley (Afternoon)
-      { name: "Sala Vermelha", staff: "Shirley" },
-      { name: "UTI 1", staff: "Shirley" },
-      { name: "UTI 4", staff: "Shirley" },
-      { name: "UC2", staff: "Shirley" },
-      { name: "P1", staff: "Shirley" },
-      { name: "P4", staff: "Shirley" },
-      { name: "P7", staff: "Shirley" },
-      { name: "P11 (238,239)", staff: "Shirley" },
+        // Juliana (Afternoon)
+        { name: "Sala Verde", staff: "Juliana" },
+        { name: "EP", staff: "Juliana" },
+        { name: "UTI 3", staff: "Juliana" },
+        { name: "UC1", staff: "Juliana" },
+        { name: "Necrotério", staff: "Juliana" },
+        { name: "P3", staff: "Juliana" },
+        { name: "P6", staff: "Juliana" },
+        { name: "P9", staff: "Juliana" },
+        { name: "P11 (233,234,235)", staff: "Juliana" },
 
-      // Plantonista (Oncall - Morning & Afternoon)
-      { name: "Sala de Trauma", staff: "Plantonista" },
-      { name: "UTI 2", staff: "Plantonista" },
-      { name: "UTQ", staff: "Plantonista" },
-      { name: "Centro Cirúrgico (CC)", staff: "Plantonista" },
-      { name: "P2", staff: "Plantonista" },
-      { name: "P5", staff: "Plantonista" },
-      { name: "P8", staff: "Plantonista" }
-    ];
+        // Shirley (Afternoon)
+        { name: "Sala Vermelha", staff: "Shirley" },
+        { name: "UTI 1", staff: "Shirley" },
+        { name: "UTI 4", staff: "Shirley" },
+        { name: "UC2", staff: "Shirley" },
+        { name: "P1", staff: "Shirley" },
+        { name: "P4", staff: "Shirley" },
+        { name: "P7", staff: "Shirley" },
+        { name: "P11 (238,239)", staff: "Shirley" },
 
-    sectorsData.forEach(sec => {
-      insertSector.run(sec.name, staffIds[sec.staff]);
-    });
+        // Plantonista (Oncall - Morning & Afternoon)
+        { name: "Sala de Trauma", staff: "Plantonista" },
+        { name: "UTI 2", staff: "Plantonista" },
+        { name: "UTQ", staff: "Plantonista" },
+        { name: "Centro Cirúrgico (CC)", staff: "Plantonista" },
+        { name: "P2", staff: "Plantonista" },
+        { name: "P5", staff: "Plantonista" },
+        { name: "P8", staff: "Plantonista" }
+      ];
+
+      sectorsData.forEach(sec => {
+        insertSector.run(sec.name, staffIds[sec.staff]);
+      });
+    }
   })();
 };
 
@@ -132,6 +138,27 @@ async function startServer() {
   const PORT = 3000;
 
   // API Routes
+  app.post("/api/login", (req, res) => {
+    const { username, password } = req.body;
+    const user = db.prepare("SELECT id, name, shift, role, needs_password_change FROM staff WHERE name = ? AND password = ?").get(username, password) as any;
+    
+    if (user) {
+      res.json({ success: true, user });
+    } else {
+      res.status(401).json({ success: false, error: "Usuário ou senha incorretos" });
+    }
+  });
+
+  app.post("/api/change-password", (req, res) => {
+    const { userId, newPassword } = req.body;
+    try {
+      db.prepare("UPDATE staff SET password = ?, needs_password_change = 0 WHERE id = ?").run(newPassword, userId);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ success: false, error: "Erro ao alterar senha" });
+    }
+  });
+
   app.get("/api/data", (req, res) => {
     const staff = db.prepare(`
       SELECT s.id, s.name, s.shift 
