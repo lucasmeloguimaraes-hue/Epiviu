@@ -1,0 +1,5 @@
+{
+  "name": "Epiviu",
+  "description": "A tool for hospital epidemiology staff to manage daily sector visits and mark missed areas.",
+  "requestFramePermissions": []
+}
