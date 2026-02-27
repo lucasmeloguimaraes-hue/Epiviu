@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  LogOut, User, Microscope, Plus, Trash2, MapPin, 
+  User, Microscope, Plus, Trash2, MapPin, 
   AlertCircle, CheckCircle2, Settings, X, Calendar, Clock, Sun, Moon
 } from 'lucide-react';
 
@@ -18,11 +18,7 @@ interface Sector {
   staff_id: number;
 }
 
-interface DashboardProps {
-  user: any;
-}
-
-export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+export const Dashboard: React.FC = () => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [missedIds, setMissedIds] = useState<number[]>([]);
@@ -122,10 +118,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     fetchData();
   }, []);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
-
   const addStaff = async () => {
     if (!newStaffName) return;
     const { error } = await supabase.from('staff').insert([{ name: newStaffName, shift: newStaffShift }]);
@@ -198,9 +190,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           <div className="flex items-center gap-2">
             <button onClick={() => setShowSettings(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-all">
               <Settings size={20} />
-            </button>
-            <button onClick={handleSignOut} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
-              <LogOut size={20} />
             </button>
           </div>
         </div>
