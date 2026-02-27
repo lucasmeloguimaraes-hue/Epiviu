@@ -15,9 +15,7 @@ import {
   Trash2,
   X,
   FileText,
-  Stethoscope,
-  Lock,
-  LogOut
+  Stethoscope
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -25,16 +23,6 @@ interface Staff {
   id: number;
   name: string;
   shift: 'morning' | 'afternoon' | 'oncall';
-  role: 'admin' | 'staff';
-  needs_password_change: number;
-}
-
-interface UserSession {
-  id: number;
-  name: string;
-  shift: 'morning' | 'afternoon' | 'oncall';
-  role: 'admin' | 'staff';
-  needs_password_change: boolean;
 }
 
 interface Sector {
@@ -60,16 +48,6 @@ export default function App() {
   const [showReports, setShowReports] = useState(false);
   const [reports, setReports] = useState<ReportItem[]>([]);
   
-  // Auth state
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
-    const saved = localStorage.getItem("epiviu_user");
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [loginUsername, setLoginUsername] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
   // Form states
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffShift, setNewStaffShift] = useState<'morning' | 'afternoon' | 'oncall'>('morning');
@@ -101,79 +79,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (currentUser && !currentUser.needs_password_change) {
-      fetchData();
-    } else {
-      setLoading(false);
-    }
-  }, [currentUser]);
+    fetchData();
+  }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: loginUsername, password: loginPassword })
-      });
-      const data = await res.json();
-      if (data.success) {
-        const user = {
-          ...data.user,
-          needs_password_change: data.user.needs_password_change === 1
-        };
-        setCurrentUser(user);
-        localStorage.setItem("epiviu_user", JSON.stringify(user));
-      } else {
-        alert(data.error);
-      }
-    } catch (err) {
-      alert("Erro ao fazer login");
-    }
-  };
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert("As senhas não coincidem");
-      return;
-    }
-    if (newPassword.length < 4) {
-      alert("A senha deve ter pelo menos 4 caracteres");
-      return;
-    }
-    try {
-      const res = await fetch("/api/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: currentUser?.id, newPassword })
-      });
-      const data = await res.json();
-      if (data.success) {
-        const updatedUser = { ...currentUser!, needs_password_change: false };
-        setCurrentUser(updatedUser);
-        localStorage.setItem("epiviu_user", JSON.stringify(updatedUser));
-        alert("Senha alterada com sucesso!");
-      } else {
-        alert(data.error);
-      }
-    } catch (err) {
-      alert("Erro ao alterar senha");
-    }
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem("epiviu_user");
-  };
-
-  const toggleMissed = async (sectorId: number, staffId: number) => {
-    // Permission check: Admin can toggle anything, Staff only their own
-    if (currentUser?.role !== 'admin' && currentUser?.id !== staffId) {
-      alert("Você só pode marcar setores sob sua responsabilidade.");
-      return;
-    }
-
+  const toggleMissed = async (sectorId: number) => {
     try {
       const res = await fetch("/api/toggle-missed", {
         method: "POST",
@@ -277,121 +186,6 @@ export default function App() {
     );
   }
 
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white w-full max-w-md rounded-3xl shadow-xl p-8 border border-slate-200"
-        >
-          <div className="text-center mb-8">
-            <div className="bg-emerald-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg">
-              <Hospital size={32} />
-            </div>
-            <h1 className="text-3xl font-bold text-slate-800">Epiviu</h1>
-            <p className="text-slate-500 mt-2">Acesse o sistema de monitoramento</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Usuário (Nome)</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="text" 
-                  value={loginUsername}
-                  onChange={(e) => setLoginUsername(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                  placeholder="Seu nome"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="password" 
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                  placeholder="Sua senha"
-                  required
-                />
-              </div>
-            </div>
-
-            <button 
-              type="submit"
-              className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98]"
-            >
-              Entrar no Sistema
-            </button>
-          </form>
-          <p className="text-center text-slate-400 text-xs mt-8 italic">
-            Senha inicial padrão: 1234
-          </p>
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (currentUser.needs_password_change) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white w-full max-w-md rounded-3xl shadow-xl p-8 border border-slate-200"
-        >
-          <div className="text-center mb-8">
-            <div className="bg-amber-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-600">
-              <Lock size={32} />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-800">Alterar Senha</h2>
-            <p className="text-slate-500 mt-2">Para sua segurança, altere sua senha inicial.</p>
-          </div>
-
-          <form onSubmit={handleChangePassword} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Nova Senha</label>
-              <input 
-                type="password" 
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                placeholder="Mínimo 4 caracteres"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Confirmar Nova Senha</label>
-              <input 
-                type="password" 
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                placeholder="Repita a nova senha"
-                required
-              />
-            </div>
-
-            <button 
-              type="submit"
-              className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all active:scale-[0.98]"
-            >
-              Salvar Nova Senha
-            </button>
-          </form>
-        </motion.div>
-      </div>
-    );
-  }
-
   // Report Summary Calculations
   const totalSectors = reports.length;
   const missedCount = reports.filter(r => r.missed_date).length;
@@ -415,26 +209,6 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-2 mr-4 pr-4 border-r border-slate-100">
-              <div className="text-right">
-                <p className="text-xs font-bold text-slate-800">{currentUser.name}</p>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">{currentUser.role === 'admin' ? 'Administrador' : 'Funcionária'}</p>
-              </div>
-              <button 
-                onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                title="Sair"
-              >
-                <LogOut size={20} />
-              </button>
-            </div>
-            <button 
-              onClick={handleLogout}
-              className="md:hidden p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-              title="Sair"
-            >
-              <LogOut size={20} />
-            </button>
             <button 
               onClick={() => {
                 fetchReports();
@@ -445,15 +219,13 @@ export default function App() {
             >
               <FileText size={20} />
             </button>
-            {currentUser.role === 'admin' && (
-              <button 
-                onClick={() => setShowSettings(true)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                title="Configurações"
-              >
-                <Settings size={20} />
-              </button>
-            )}
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Configurações"
+            >
+              <Settings size={20} />
+            </button>
             <div className="flex bg-slate-100 p-1 rounded-xl overflow-x-auto">
               <button 
                 onClick={() => setSelectedShift('morning')}
@@ -546,17 +318,15 @@ export default function App() {
                         .filter(s => s.staff_id === person.id)
                         .map(sector => {
                           const isMissed = missedIds.includes(sector.id);
-                          const isOwnSector = currentUser?.role === 'admin' || currentUser?.id === person.id;
-                          
                           return (
                             <button
                               key={sector.id}
-                              onClick={() => toggleMissed(sector.id, person.id)}
+                              onClick={() => toggleMissed(sector.id)}
                               className={`group relative flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left ${
                                 isMissed 
                                   ? 'bg-rose-50 border-rose-200 text-rose-800 ring-4 ring-rose-50' 
                                   : 'bg-white border-slate-100 text-slate-700 hover:border-emerald-200 hover:bg-emerald-50/30'
-                              } ${!isOwnSector ? 'opacity-60 cursor-not-allowed' : ''}`}
+                              }`}
                             >
                               <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-lg transition-colors ${
