@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  User, Plus, Trash2, MapPin, 
+  LogOut, User, Microscope, Plus, Trash2, MapPin, 
   AlertCircle, CheckCircle2, Settings, X, Calendar, Clock, Sun, Moon
 } from 'lucide-react';
 
@@ -18,7 +18,11 @@ interface Sector {
   staff_id: number;
 }
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  user: any;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [missedIds, setMissedIds] = useState<number[]>([]);
@@ -26,58 +30,12 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
-  const [isSeeding, setIsSeeding] = useState(false);
 
   // Form states
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffShift, setNewStaffShift] = useState<'morning' | 'afternoon' | 'oncall'>('morning');
   const [newSectorName, setNewSectorName] = useState("");
   const [selectedStaffForSector, setSelectedStaffForSector] = useState<number | "">("");
-
-  const seedData = async () => {
-    if (!confirm("Isso irá carregar a equipe e os setores padrão da tabela. Continuar?")) return;
-    setIsSeeding(true);
-    try {
-      const morningStaff = [
-        { name: 'Nayana', shift: 'morning', sectors: ['Sala Verde', 'EP', 'UTI 3', 'UC1', 'Necrotério', 'P3', 'P6', 'P9', 'P11(229,230,231,232)'] },
-        { name: 'Cleonice', shift: 'morning', sectors: ['Sala Vermelha', 'UTI 1', 'UTI 4', 'UC2', 'P1', 'P4', 'P7', 'P11 (236,237, LEITOS EXTRAS)'] },
-        { name: 'Plantonista Manhã', shift: 'morning', sectors: ['Sala de Trauma', 'UTI 2', 'UTQ', 'Centro Cirúrgico (CC)', 'P2', 'P5', 'P8'] }
-      ];
-
-      const afternoonStaff = [
-        { name: 'Juliana', shift: 'afternoon', sectors: ['Sala Verde', 'EP', 'UTI 3', 'UC1', 'Necrotério', 'P3', 'P6', 'P9', 'P11 (233,234,235)'] },
-        { name: 'Shirley', shift: 'afternoon', sectors: ['Sala Vermelha', 'UTI 1', 'UTI 4', 'UC2', 'P1', 'P4', 'P7', 'P11  (238,239)'] },
-        { name: 'Plantonista Tarde', shift: 'afternoon', sectors: ['Sala de Trauma', 'UTI 2', 'UTQ', 'Centro Cirúrgico (CC)', 'P2', 'P5', 'P8'] }
-      ];
-
-      const allStaff = [...morningStaff, ...afternoonStaff];
-
-      for (const s of allStaff) {
-        const { data: staffMember, error: sErr } = await supabase
-          .from('staff')
-          .insert([{ name: s.name, shift: s.shift }])
-          .select()
-          .single();
-        
-        if (sErr) throw sErr;
-
-        const sectorInserts = s.sectors.map(name => ({
-          name,
-          staff_id: staffMember.id
-        }));
-
-        const { error: secErr } = await supabase.from('sectors').insert(sectorInserts);
-        if (secErr) throw secErr;
-      }
-
-      alert("Dados carregados com sucesso!");
-      fetchData();
-    } catch (err: any) {
-      alert("Erro ao carregar dados: " + err.message);
-    } finally {
-      setIsSeeding(false);
-    }
-  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -117,6 +75,10 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   const addStaff = async () => {
     if (!newStaffName) return;
@@ -177,13 +139,8 @@ export const Dashboard: React.FC = () => {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 overflow-hidden flex items-center justify-center w-12 h-12">
-              <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Eye_of_Horus_bw.svg/1200px-Eye_of_Horus_bw.svg.png" 
-                alt="Logo Epiviu" 
-                className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
-              />
+            <div className="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-200">
+              <Microscope size={24} />
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900">Epiviu</h1>
@@ -195,6 +152,9 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center gap-2">
             <button onClick={() => setShowSettings(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-all">
               <Settings size={20} />
+            </button>
+            <button onClick={handleSignOut} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+              <LogOut size={20} />
             </button>
           </div>
         </div>
@@ -267,15 +227,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Summary */}
-        <div className="mt-12 p-8 bg-slate-900 rounded-3xl text-white shadow-xl border border-slate-800 relative overflow-hidden">
-          <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12">
-            <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Eye_of_Horus_bw.svg/1200px-Eye_of_Horus_bw.svg.png" 
-              alt="" 
-              className="w-40 h-40 invert"
-              referrerPolicy="no-referrer"
-            />
-          </div>
+        <div className="mt-12 p-8 bg-slate-900 rounded-3xl text-white shadow-xl border border-slate-800">
           <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Clock size={20} className="text-indigo-400" /> Resumo do Dia</h3>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div><p className="text-slate-400 text-xs uppercase font-bold mb-1">Setores</p><p className="text-3xl font-bold">{sectors.length}</p></div>
@@ -296,20 +248,6 @@ export const Dashboard: React.FC = () => {
                 <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X size={20} /></button>
               </div>
               <div className="p-6 overflow-y-auto space-y-8">
-                {/* Carga Inicial */}
-                <section className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-                  <h3 className="text-sm font-bold text-indigo-900 mb-2">Carga Inicial de Dados</h3>
-                  <p className="text-xs text-indigo-700 mb-4">Clique no botão abaixo para carregar automaticamente a equipe e os setores conforme a tabela padrão.</p>
-                  <button 
-                    onClick={seedData}
-                    disabled={isSeeding}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isSeeding ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus size={16} />}
-                    <span>Carregar Equipe e Setores</span>
-                  </button>
-                </section>
-
                 {/* Staff Management */}
                 <section>
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Equipe</h3>
