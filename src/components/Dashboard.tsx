@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  User, Plus, Trash2, MapPin, 
+  LogOut, User, Microscope, Plus, Trash2, MapPin, 
   AlertCircle, CheckCircle2, Settings, X, Calendar, Clock, Sun, Moon
 } from 'lucide-react';
 
@@ -18,7 +18,11 @@ interface Sector {
   staff_id: number;
 }
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  user: any;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [missedIds, setMissedIds] = useState<number[]>([]);
@@ -118,6 +122,10 @@ export const Dashboard: React.FC = () => {
     fetchData();
   }, []);
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   const addStaff = async () => {
     if (!newStaffName) return;
     const { error } = await supabase.from('staff').insert([{ name: newStaffName, shift: newStaffShift }]);
@@ -177,13 +185,8 @@ export const Dashboard: React.FC = () => {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 overflow-hidden flex items-center justify-center w-12 h-12">
-              <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Eye_of_Horus_bw.svg/1200px-Eye_of_Horus_bw.svg.png" 
-                alt="Logo Epiviu" 
-                className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
-              />
+            <div className="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-200">
+              <Microscope size={24} />
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900">Epiviu</h1>
@@ -195,6 +198,9 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center gap-2">
             <button onClick={() => setShowSettings(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-all">
               <Settings size={20} />
+            </button>
+            <button onClick={handleSignOut} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+              <LogOut size={20} />
             </button>
           </div>
         </div>
@@ -267,15 +273,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Summary */}
-        <div className="mt-12 p-8 bg-slate-900 rounded-3xl text-white shadow-xl border border-slate-800 relative overflow-hidden">
-          <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12">
-            <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Eye_of_Horus_bw.svg/1200px-Eye_of_Horus_bw.svg.png" 
-              alt="" 
-              className="w-40 h-40 invert"
-              referrerPolicy="no-referrer"
-            />
-          </div>
+        <div className="mt-12 p-8 bg-slate-900 rounded-3xl text-white shadow-xl border border-slate-800">
           <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Clock size={20} className="text-indigo-400" /> Resumo do Dia</h3>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div><p className="text-slate-400 text-xs uppercase font-bold mb-1">Setores</p><p className="text-3xl font-bold">{sectors.length}</p></div>
