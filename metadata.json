@@ -1,5 +1,5 @@
 {
-  "name": "Epiviu",
-  "description": "A tool for hospital epidemiology staff to manage daily sector visits and mark missed areas.",
+  "name": "Supabase Auth Demo",
+  "description": "A simple authentication system using React, Tailwind CSS, and Supabase.",
   "requestFramePermissions": []
 }
