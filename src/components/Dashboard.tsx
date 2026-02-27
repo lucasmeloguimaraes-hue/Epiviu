@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  LogOut, User, ShieldCheck, Plus, Trash2, MapPin, 
-  AlertCircle, CheckCircle2, Settings, X, Calendar, Sun, Moon, Clock
+  LogOut, User, Microscope, Plus, Trash2, MapPin, 
+  AlertCircle, CheckCircle2, Settings, X, Calendar, Clock, Sun, Moon
 } from 'lucide-react';
 
 interface Staff {
@@ -29,6 +29,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [selectedShift, setSelectedShift] = useState<'morning' | 'afternoon'>('morning');
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   // Form states
   const [newStaffName, setNewStaffName] = useState("");
@@ -36,13 +38,55 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [newSectorName, setNewSectorName] = useState("");
   const [selectedStaffForSector, setSelectedStaffForSector] = useState<number | "">("");
 
-  const [dbError, setDbError] = useState<string | null>(null);
+  const seedData = async () => {
+    if (!confirm("Isso irá carregar a equipe e os setores padrão da tabela. Continuar?")) return;
+    setIsSeeding(true);
+    try {
+      const morningStaff = [
+        { name: 'Nayana', shift: 'morning', sectors: ['Sala Verde', 'EP', 'UTI 3', 'UC1', 'Necrotério', 'P3', 'P6', 'P9', 'P11(229,230,231,232)'] },
+        { name: 'Cleonice', shift: 'morning', sectors: ['Sala Vermelha', 'UTI 1', 'UTI 4', 'UC2', 'P1', 'P4', 'P7', 'P11 (236,237, LEITOS EXTRAS)'] },
+        { name: 'Plantonista Manhã', shift: 'morning', sectors: ['Sala de Trauma', 'UTI 2', 'UTQ', 'Centro Cirúrgico (CC)', 'P2', 'P5', 'P8'] }
+      ];
+
+      const afternoonStaff = [
+        { name: 'Juliana', shift: 'afternoon', sectors: ['Sala Verde', 'EP', 'UTI 3', 'UC1', 'Necrotério', 'P3', 'P6', 'P9', 'P11 (233,234,235)'] },
+        { name: 'Shirley', shift: 'afternoon', sectors: ['Sala Vermelha', 'UTI 1', 'UTI 4', 'UC2', 'P1', 'P4', 'P7', 'P11  (238,239)'] },
+        { name: 'Plantonista Tarde', shift: 'afternoon', sectors: ['Sala de Trauma', 'UTI 2', 'UTQ', 'Centro Cirúrgico (CC)', 'P2', 'P5', 'P8'] }
+      ];
+
+      const allStaff = [...morningStaff, ...afternoonStaff];
+
+      for (const s of allStaff) {
+        const { data: staffMember, error: sErr } = await supabase
+          .from('staff')
+          .insert([{ name: s.name, shift: s.shift }])
+          .select()
+          .single();
+        
+        if (sErr) throw sErr;
+
+        const sectorInserts = s.sectors.map(name => ({
+          name,
+          staff_id: staffMember.id
+        }));
+
+        const { error: secErr } = await supabase.from('sectors').insert(sectorInserts);
+        if (secErr) throw secErr;
+      }
+
+      alert("Dados carregados com sucesso!");
+      fetchData();
+    } catch (err: any) {
+      alert("Erro ao carregar dados: " + err.message);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
     setDbError(null);
     try {
-      // Teste de conexão/tabelas
       const { error: staffError, data: staffData } = await supabase.from('staff').select('*').order('name');
       
       if (staffError) {
@@ -141,17 +185,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-indigo-600 p-2 rounded-lg text-white">
-              <ShieldCheck size={24} />
+            <div className="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-200">
+              <Microscope size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Epiviu Auth</h1>
+              <h1 className="text-xl font-bold text-slate-900">Epiviu</h1>
               <p className="text-xs text-slate-500 font-medium flex items-center gap-1 uppercase tracking-wider">
                 <Calendar size={12} /> {todayStr}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button onClick={() => setShowSettings(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-all">
               <Settings size={20} />
             </button>
@@ -229,7 +273,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
 
         {/* Summary */}
-        <div className="mt-12 p-8 bg-slate-900 rounded-3xl text-white shadow-xl">
+        <div className="mt-12 p-8 bg-slate-900 rounded-3xl text-white shadow-xl border border-slate-800">
           <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Clock size={20} className="text-indigo-400" /> Resumo do Dia</h3>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div><p className="text-slate-400 text-xs uppercase font-bold mb-1">Setores</p><p className="text-3xl font-bold">{sectors.length}</p></div>
@@ -244,18 +288,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         {showSettings && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col border border-slate-200">
               <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-slate-800">Configurações</h2>
-                <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+                <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X size={20} /></button>
               </div>
               <div className="p-6 overflow-y-auto space-y-8">
+                {/* Carga Inicial */}
+                <section className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                  <h3 className="text-sm font-bold text-indigo-900 mb-2">Carga Inicial de Dados</h3>
+                  <p className="text-xs text-indigo-700 mb-4">Clique no botão abaixo para carregar automaticamente a equipe e os setores conforme a tabela padrão.</p>
+                  <button 
+                    onClick={seedData}
+                    disabled={isSeeding}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSeeding ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus size={16} />}
+                    <span>Carregar Equipe e Setores</span>
+                  </button>
+                </section>
+
                 {/* Staff Management */}
                 <section>
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Equipe</h3>
                   <div className="flex gap-2 mb-4">
-                    <input type="text" placeholder="Nome" value={newStaffName} onChange={e => setNewStaffName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20" />
-                    <select value={newStaffShift} onChange={e => setNewStaffShift(e.target.value as any)} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none">
+                    <input type="text" placeholder="Nome" value={newStaffName} onChange={e => setNewStaffName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900" />
+                    <select value={newStaffShift} onChange={e => setNewStaffShift(e.target.value as any)} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none text-slate-900">
                       <option value="morning">Manhã</option>
                       <option value="afternoon">Tarde</option>
                       <option value="oncall">Plantonista</option>
@@ -276,8 +334,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 <section>
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Setores</h3>
                   <div className="flex gap-2 mb-4">
-                    <input type="text" placeholder="Setor" value={newSectorName} onChange={e => setNewSectorName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20" />
-                    <select value={selectedStaffForSector} onChange={e => setSelectedStaffForSector(Number(e.target.value))} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none">
+                    <input type="text" placeholder="Setor" value={newSectorName} onChange={e => setNewSectorName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900" />
+                    <select value={selectedStaffForSector} onChange={e => setSelectedStaffForSector(Number(e.target.value))} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none text-slate-900">
                       <option value="">Vincular a...</option>
                       {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>

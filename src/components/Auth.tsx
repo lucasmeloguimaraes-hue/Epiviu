@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { motion } from 'motion/react';
-import { LogIn, UserPlus, Mail, Lock, AlertCircle } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, AlertCircle, Microscope } from 'lucide-react';
 
 export const Auth: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -54,11 +54,16 @@ export const Auth: React.FC = () => {
         className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100"
       >
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg shadow-indigo-200">
+              <Microscope className="w-8 h-8 text-white" />
+            </div>
+          </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            {isSignUp ? 'Criar Conta' : 'Bem-vindo de volta'}
+            Epiviu
           </h1>
           <p className="text-slate-500">
-            {isSignUp ? 'Preencha os dados para se cadastrar' : 'Entre com suas credenciais'}
+            {isSignUp ? 'Crie sua conta de vigilância' : 'Acesse o sistema de vigilância'}
           </p>
         </div>
 
@@ -72,7 +77,7 @@ export const Auth: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                 placeholder="seu@email.com"
               />
             </div>
@@ -87,7 +92,7 @@ export const Auth: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -106,7 +111,7 @@ export const Auth: React.FC = () => {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                   placeholder="••••••••"
                 />
               </div>
