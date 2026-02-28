@@ -33,7 +33,6 @@ ALTER TABLE public.missed_visits ENABLE ROW LEVEL SECURITY;
 
 -- 5. Criar Políticas de Acesso (RLS Policies)
 -- Permitir que qualquer usuário autenticado leia e modifique os dados
--- (Ajuste conforme a necessidade de privacidade do hospital)
 
 -- Políticas para STAFF
 DO $$ BEGIN
@@ -85,3 +84,70 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
     CREATE POLICY "Permitir exclusão para usuários autenticados" ON public.missed_visits FOR DELETE TO authenticated USING (true);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- 6. Inserir Dados Iniciais (Opcional - Baseado na Planilha)
+-- Inserir Equipe
+INSERT INTO public.staff (name, shift) VALUES 
+('Nayana', 'morning'),
+('Cleonice', 'morning'),
+('Plantonista Manhã', 'morning'),
+('Juliana', 'afternoon'),
+('Shirley', 'afternoon'),
+('Plantonista Tarde', 'afternoon');
+
+-- Inserir Setores (Vincular aos IDs gerados acima)
+-- Nota: Usamos subconsultas para garantir o vínculo correto pelo nome
+INSERT INTO public.sectors (name, staff_id) VALUES 
+('Sala Verde', (SELECT id FROM public.staff WHERE name = 'Nayana' AND shift = 'morning')),
+('EP', (SELECT id FROM public.staff WHERE name = 'Nayana' AND shift = 'morning')),
+('UTI 3', (SELECT id FROM public.staff WHERE name = 'Nayana' AND shift = 'morning')),
+('UC1', (SELECT id FROM public.staff WHERE name = 'Nayana' AND shift = 'morning')),
+('Necrotério', (SELECT id FROM public.staff WHERE name = 'Nayana' AND shift = 'morning')),
+('P3', (SELECT id FROM public.staff WHERE name = 'Nayana' AND shift = 'morning')),
+('P6', (SELECT id FROM public.staff WHERE name = 'Nayana' AND shift = 'morning')),
+('P9', (SELECT id FROM public.staff WHERE name = 'Nayana' AND shift = 'morning')),
+('P11(229,230,231,232)', (SELECT id FROM public.staff WHERE name = 'Nayana' AND shift = 'morning')),
+
+('Sala Vermelha', (SELECT id FROM public.staff WHERE name = 'Cleonice' AND shift = 'morning')),
+('UTI 1', (SELECT id FROM public.staff WHERE name = 'Cleonice' AND shift = 'morning')),
+('UTI 4', (SELECT id FROM public.staff WHERE name = 'Cleonice' AND shift = 'morning')),
+('UC2', (SELECT id FROM public.staff WHERE name = 'Cleonice' AND shift = 'morning')),
+('P1', (SELECT id FROM public.staff WHERE name = 'Cleonice' AND shift = 'morning')),
+('P4', (SELECT id FROM public.staff WHERE name = 'Cleonice' AND shift = 'morning')),
+('P7', (SELECT id FROM public.staff WHERE name = 'Cleonice' AND shift = 'morning')),
+('P11 (236,237, LEITOS EXTRAS)', (SELECT id FROM public.staff WHERE name = 'Cleonice' AND shift = 'morning')),
+
+('Sala de Trauma', (SELECT id FROM public.staff WHERE name = 'Plantonista Manhã' AND shift = 'morning')),
+('UTI 2', (SELECT id FROM public.staff WHERE name = 'Plantonista Manhã' AND shift = 'morning')),
+('UTQ', (SELECT id FROM public.staff WHERE name = 'Plantonista Manhã' AND shift = 'morning')),
+('Centro Cirúrgico (CC)', (SELECT id FROM public.staff WHERE name = 'Plantonista Manhã' AND shift = 'morning')),
+('P2', (SELECT id FROM public.staff WHERE name = 'Plantonista Manhã' AND shift = 'morning')),
+('P5', (SELECT id FROM public.staff WHERE name = 'Plantonista Manhã' AND shift = 'morning')),
+('P8', (SELECT id FROM public.staff WHERE name = 'Plantonista Manhã' AND shift = 'morning')),
+
+('Sala Verde', (SELECT id FROM public.staff WHERE name = 'Juliana' AND shift = 'afternoon')),
+('EP', (SELECT id FROM public.staff WHERE name = 'Juliana' AND shift = 'afternoon')),
+('UTI 3', (SELECT id FROM public.staff WHERE name = 'Juliana' AND shift = 'afternoon')),
+('UC1', (SELECT id FROM public.staff WHERE name = 'Juliana' AND shift = 'afternoon')),
+('Necrotério', (SELECT id FROM public.staff WHERE name = 'Juliana' AND shift = 'afternoon')),
+('P3', (SELECT id FROM public.staff WHERE name = 'Juliana' AND shift = 'afternoon')),
+('P6', (SELECT id FROM public.staff WHERE name = 'Juliana' AND shift = 'afternoon')),
+('P9', (SELECT id FROM public.staff WHERE name = 'Juliana' AND shift = 'afternoon')),
+('P11 (233,234,235)', (SELECT id FROM public.staff WHERE name = 'Juliana' AND shift = 'afternoon')),
+
+('Sala Vermelha', (SELECT id FROM public.staff WHERE name = 'Shirley' AND shift = 'afternoon')),
+('UTI 1', (SELECT id FROM public.staff WHERE name = 'Shirley' AND shift = 'afternoon')),
+('UTI 4', (SELECT id FROM public.staff WHERE name = 'Shirley' AND shift = 'afternoon')),
+('UC2', (SELECT id FROM public.staff WHERE name = 'Shirley' AND shift = 'afternoon')),
+('P1', (SELECT id FROM public.staff WHERE name = 'Shirley' AND shift = 'afternoon')),
+('P4', (SELECT id FROM public.staff WHERE name = 'Shirley' AND shift = 'afternoon')),
+('P7', (SELECT id FROM public.staff WHERE name = 'Shirley' AND shift = 'afternoon')),
+('P11  (238,239)', (SELECT id FROM public.staff WHERE name = 'Shirley' AND shift = 'afternoon')),
+
+('Sala de Trauma', (SELECT id FROM public.staff WHERE name = 'Plantonista Tarde' AND shift = 'afternoon')),
+('UTI 2', (SELECT id FROM public.staff WHERE name = 'Plantonista Tarde' AND shift = 'afternoon')),
+('UTQ', (SELECT id FROM public.staff WHERE name = 'Plantonista Tarde' AND shift = 'afternoon')),
+('Centro Cirúrgico (CC)', (SELECT id FROM public.staff WHERE name = 'Plantonista Tarde' AND shift = 'afternoon')),
+('P2', (SELECT id FROM public.staff WHERE name = 'Plantonista Tarde' AND shift = 'afternoon')),
+('P5', (SELECT id FROM public.staff WHERE name = 'Plantonista Tarde' AND shift = 'afternoon')),
+('P8', (SELECT id FROM public.staff WHERE name = 'Plantonista Tarde' AND shift = 'afternoon'));

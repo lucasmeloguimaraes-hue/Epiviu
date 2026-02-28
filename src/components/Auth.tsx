@@ -1,171 +1,131 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { motion } from 'motion/react';
-import { LogIn, UserPlus, Mail, Lock, AlertCircle, Microscope } from 'lucide-react';
+import { Eye, LogIn, UserPlus, AlertCircle } from 'lucide-react';
 
 export const Auth: React.FC = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
 
-    if (isSignUp && password !== confirmPassword) {
-      setError('As senhas não coincidem');
+    if (!isLogin && password !== confirmPassword) {
+      setError("As senhas não coincidem.");
       setLoading(false);
       return;
     }
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        setMessage('Cadastro realizado! Verifique seu e-mail para confirmar.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
+        alert("Cadastro realizado! Verifique seu e-mail se necessário.");
       }
     } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro na autenticação');
+      setError(err.message || "Ocorreu um erro na autenticação.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100"
-      >
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg shadow-indigo-200">
-              <Microscope className="w-8 h-8 text-white" />
-            </div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="p-8 text-center bg-indigo-600 text-white">
+          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+            <Eye size={32} />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Epiviu
-          </h1>
-          <p className="text-slate-500">
-            {isSignUp ? 'Crie sua conta de vigilância' : 'Acesse o sistema de vigilância'}
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Epiviu</h1>
+          <p className="text-indigo-100 mt-2 font-medium">Vigilância Epidemiológica</p>
         </div>
 
-        <form onSubmit={handleAuth} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+        <div className="p-8">
+          <form onSubmit={handleAuth} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-sm">
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">E-mail</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                 placeholder="seu@email.com"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Senha</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Senha</label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                 placeholder="••••••••"
               />
             </div>
-          </div>
 
-          {isSignUp && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-            >
-              <label className="block text-sm font-medium text-slate-700 mb-1">Confirmar Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            {!isLogin && (
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Confirmar Senha</label>
                 <input
                   type="password"
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                   placeholder="••••••••"
                 />
               </div>
-            </motion.div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {message && (
-            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 p-3 rounded-lg text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <span>{message}</span>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : isSignUp ? (
-              <>
-                <UserPlus className="w-5 h-5" />
-                <span>Cadastrar</span>
-              </>
-            ) : (
-              <>
-                <LogIn className="w-5 h-5" />
-                <span>Entrar</span>
-              </>
             )}
-          </button>
-        </form>
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError(null);
-              setMessage(null);
-            }}
-            className="text-indigo-600 hover:text-indigo-800 text-sm font-medium transition-colors"
-          >
-            {isSignUp ? 'Já tem uma conta? Entre aqui' : 'Não tem uma conta? Cadastre-se'}
-          </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : isLogin ? (
+                <>
+                  <LogIn size={20} />
+                  <span>Entrar</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus size={20} />
+                  <span>Cadastrar</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              {isLogin ? "Não tem uma conta? Cadastre-se" : "Já tem uma conta? Entre aqui"}
+            </button>
+          </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

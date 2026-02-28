@@ -1,5 +1,5 @@
 {
   "name": "Epiviu",
-  "description": "Sistema de Gestão de Vigilância Epidemiológica Hospitalar.",
+  "description": "Sistema de Vigilância Epidemiológica Hospitalar para monitoramento de visitas aos setores.",
   "requestFramePermissions": []
 }
