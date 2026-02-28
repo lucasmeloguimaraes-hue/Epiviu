@@ -9,7 +9,7 @@ import {
 interface Staff {
   id: number;
   name: string;
-  shift: 'morning' | 'afternoon' | 'oncall';
+  shift: 'morning' | 'afternoon';
 }
 
 interface Sector {
@@ -28,14 +28,14 @@ export const Dashboard: React.FC = () => {
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [missedToday, setMissedToday] = useState<number[]>([]);
   const [missedMonth, setMissedMonth] = useState<MissedVisit[]>([]);
-  const [selectedShift, setSelectedShift] = useState<'morning' | 'afternoon' | 'oncall'>('morning');
+  const [selectedShift, setSelectedShift] = useState<'morning' | 'afternoon'>('morning');
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
   // Form states
   const [newStaffName, setNewStaffName] = useState("");
-  const [newStaffShift, setNewStaffShift] = useState<'morning' | 'afternoon' | 'oncall'>('morning');
+  const [newStaffShift, setNewStaffShift] = useState<'morning' | 'afternoon'>('morning');
   const [newSectorName, setNewSectorName] = useState("");
   const [selectedStaffForSector, setSelectedStaffForSector] = useState<number | "">("");
 
@@ -176,10 +176,7 @@ export const Dashboard: React.FC = () => {
     ).slice(0, 5);
   }, [newSectorName, existingSectorNames]);
 
-  const filteredStaff = staff.filter(s => {
-    if (selectedShift === 'oncall') return s.shift === 'oncall';
-    return s.shift === selectedShift || s.shift === 'oncall';
-  });
+  const filteredStaff = staff.filter(s => s.shift === selectedShift);
 
   const todayStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const currentMonthName = new Date().toLocaleDateString('pt-BR', { month: 'long' });
@@ -258,12 +255,6 @@ export const Dashboard: React.FC = () => {
             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${selectedShift === 'afternoon' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
           >
             <Moon size={18} /> Tarde
-          </button>
-          <button 
-            onClick={() => setSelectedShift('oncall')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${selectedShift === 'oncall' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
-          >
-            <Clock size={18} /> Plantonista
           </button>
         </div>
 
@@ -453,7 +444,6 @@ export const Dashboard: React.FC = () => {
                     >
                       <option value="morning">Manhã</option>
                       <option value="afternoon">Tarde</option>
-                      <option value="oncall">Plantonista</option>
                     </select>
                     <button 
                       onClick={addStaff} 
