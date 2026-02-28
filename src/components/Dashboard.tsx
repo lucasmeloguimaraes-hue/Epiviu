@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LogOut, User, Eye, Plus, Trash2, MapPin, 
-  AlertCircle, CheckCircle2, Settings, X, Calendar, Clock, Sun, Moon, Search
+  AlertCircle, CheckCircle2, Settings, X, Calendar, Clock, Sun, Moon, Search, Database
 } from 'lucide-react';
 
 interface Staff {
@@ -80,8 +80,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }
   };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   const seedDatabase = async () => {
-    if (!confirm("Deseja carregar os dados iniciais da planilha? Isso irá inserir a equipe e os setores padrão no banco de dados.")) return;
+    if (!confirm("Deseja carregar os dados iniciais da planilha? Isso irá inserir a equipe e os setores padrão no banco de dados vinculados à sua conta.")) return;
     setIsSeeding(true);
     try {
       const morningStaff = [
@@ -130,14 +138,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
-
   const addStaff = async () => {
     if (!newStaffName) return;
     const { error } = await supabase.from('staff').insert([{ 
@@ -153,7 +153,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   const deleteStaff = async (id: number) => {
     if (!confirm("Excluir funcionária e todos os seus setores vinculados?")) return;
-    const { error } = await supabase.from('staff').delete().eq('id', id);
+    const { error } = await supabase.from('staff').delete().eq('id', id).eq('user_id', user.id);
     if (!error) fetchData();
   };
 
@@ -172,7 +172,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   const deleteSector = async (id: number) => {
     if (!confirm("Excluir este setor?")) return;
-    const { error } = await supabase.from('sectors').delete().eq('id', id);
+    const { error } = await supabase.from('sectors').delete().eq('id', id).eq('user_id', user.id);
     if (!error) fetchData();
   };
 
@@ -224,8 +224,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const missedTodayCount = missedToday.length;
   const visitedTodayCount = totalSectorsCount - missedTodayCount;
 
-  // Monthly summary: we calculate average or totals. User asked for "Setores, Visitados e Pendente".
-  // For monthly, let's assume it's the sum of all days in the month so far.
+  // Monthly summary
   const daysInMonthSoFar = new Set(missedMonth.map(m => m.visit_date)).size || 1;
   const totalPotentialVisits = totalSectorsCount * daysInMonthSoFar;
   const totalMissedMonth = missedMonth.length;
@@ -236,7 +235,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 font-medium animate-pulse">Carregando Epiviu...</p>
+          <p className="text-slate-500 font-black animate-pulse tracking-widest uppercase text-xs">Epiviu</p>
         </div>
       </div>
     );
@@ -474,7 +473,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
               <div className="p-8 overflow-y-auto space-y-12">
                 {/* Carga Inicial */}
                 <section className="p-6 bg-indigo-50 rounded-[2rem] border border-indigo-100">
-                  <h3 className="text-sm font-black text-indigo-900 mb-2">Carga Inicial de Dados</h3>
+                  <h3 className="text-sm font-black text-indigo-900 mb-2 flex items-center gap-2">
+                    <Database size={16} /> Carga Inicial de Dados
+                  </h3>
                   <p className="text-xs text-indigo-700 mb-4 font-medium leading-relaxed">Clique no botão abaixo para alimentar o banco de dados automaticamente com a equipe e os setores da planilha.</p>
                   <button 
                     onClick={seedDatabase}

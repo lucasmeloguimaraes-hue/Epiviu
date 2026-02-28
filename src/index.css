@@ -7,19 +7,19 @@
 
 @layer base {
   body {
-    @apply antialiased text-slate-900;
+    @apply font-sans text-slate-900 antialiased bg-slate-50;
   }
 }
 
-/* Custom scrollbar for a cleaner look */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-slate-50;
+  @apply bg-transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full border-2 border-slate-50 hover:bg-slate-300 transition-colors;
+  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
 }
