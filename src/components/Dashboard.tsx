@@ -101,7 +101,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       for (const s of allStaff) {
         const { data: staffMember, error: sErr } = await supabase
           .from('staff')
-          .insert([{ name: s.name, shift: s.shift }])
+          .insert([{ 
+            name: s.name, 
+            shift: s.shift,
+            user_id: user.id 
+          }])
           .select()
           .single();
         
@@ -109,7 +113,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
         const sectorInserts = s.sectors.map(name => ({
           name,
-          staff_id: staffMember.id
+          staff_id: staffMember.id,
+          user_id: user.id
         }));
 
         const { error: secErr } = await supabase.from('sectors').insert(sectorInserts);
@@ -135,7 +140,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   const addStaff = async () => {
     if (!newStaffName) return;
-    const { error } = await supabase.from('staff').insert([{ name: newStaffName, shift: newStaffShift }]);
+    const { error } = await supabase.from('staff').insert([{ 
+      name: newStaffName, 
+      shift: newStaffShift,
+      user_id: user.id 
+    }]);
     if (!error) {
       setNewStaffName("");
       fetchData();
@@ -150,7 +159,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   const addSector = async () => {
     if (!newSectorName || !selectedStaffForSector) return;
-    const { error } = await supabase.from('sectors').insert([{ name: newSectorName, staff_id: selectedStaffForSector }]);
+    const { error } = await supabase.from('sectors').insert([{ 
+      name: newSectorName, 
+      staff_id: selectedStaffForSector,
+      user_id: user.id
+    }]);
     if (!error) {
       setNewSectorName("");
       fetchData();
@@ -168,11 +181,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const isMissed = missedToday.includes(sectorId);
 
     if (isMissed) {
-      await supabase.from('missed_visits').delete().eq('sector_id', sectorId).eq('visit_date', today);
+      await supabase.from('missed_visits')
+        .delete()
+        .eq('sector_id', sectorId)
+        .eq('visit_date', today)
+        .eq('user_id', user.id);
       setMissedToday(prev => prev.filter(id => id !== sectorId));
       setMissedMonth(prev => prev.filter(m => !(m.sector_id === sectorId && m.visit_date === today)));
     } else {
-      await supabase.from('missed_visits').insert([{ sector_id: sectorId, visit_date: today }]);
+      await supabase.from('missed_visits').insert([{ 
+        sector_id: sectorId, 
+        visit_date: today,
+        user_id: user.id
+      }]);
       setMissedToday(prev => [...prev, sectorId]);
       setMissedMonth(prev => [...prev, { sector_id: sectorId, visit_date: today }]);
     }
