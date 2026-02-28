@@ -32,7 +32,6 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
-  const [isSeeding, setIsSeeding] = useState(false);
 
   // Form states
   const [newStaffName, setNewStaffName] = useState("");
@@ -72,6 +71,8 @@ export const Dashboard: React.FC = () => {
       let message = err.message || "Erro de conexão com o banco de dados.";
       if (message.includes("Failed to fetch")) {
         message = "Não foi possível conectar ao Supabase. Verifique se a URL e a Chave Anon estão corretas e se o projeto não está pausado.";
+      } else if (message.includes("relation") && message.includes("does not exist")) {
+        message = "As tabelas não foram encontradas no banco de dados. Por favor, execute o script SQL de configuração no SQL Editor do seu Supabase.";
       }
       setDbError(message);
       console.error(err);
@@ -88,61 +89,17 @@ export const Dashboard: React.FC = () => {
     // Auth removed
   };
 
-  const seedDatabase = async () => {
-    if (!confirm("Deseja carregar os dados iniciais da planilha? Isso irá inserir a equipe e os setores padrão no banco de dados vinculados à sua conta.")) return;
-    setIsSeeding(true);
-    try {
-      const morningStaff = [
-        { name: 'Nayana', shift: 'morning', sectors: ['Sala Verde', 'EP', 'UTI 3', 'UC1', 'Necrotério', 'P3', 'P6', 'P9', 'P11(229,230,231,232)'] },
-        { name: 'Cleonice', shift: 'morning', sectors: ['Sala Vermelha', 'UTI 1', 'UTI 4', 'UC2', 'P1', 'P4', 'P7', 'P11 (236,237, LEITOS EXTRAS)'] },
-        { name: 'Plantonista Manhã', shift: 'oncall', sectors: ['Sala de Trauma', 'UTI 2', 'UTQ', 'Centro Cirúrgico (CC)', 'P2', 'P5', 'P8'] }
-      ];
-
-      const afternoonStaff = [
-        { name: 'Juliana', shift: 'afternoon', sectors: ['Sala Verde', 'EP', 'UTI 3', 'UC1', 'Necrotério', 'P3', 'P6', 'P9', 'P11 (233,234,235)'] },
-        { name: 'Shirley', shift: 'afternoon', sectors: ['Sala Vermelha', 'UTI 1', 'UTI 4', 'UC2', 'P1', 'P4', 'P7', 'P11  (238,239)'] },
-        { name: 'Plantonista Tarde', shift: 'oncall', sectors: ['Sala de Trauma', 'UTI 2', 'UTQ', 'Centro Cirúrgico (CC)', 'P2', 'P5', 'P8'] }
-      ];
-
-      const allStaff = [...morningStaff, ...afternoonStaff];
-
-      for (const s of allStaff) {
-        const { data: staffMember, error: sErr } = await supabase
-          .from('staff')
-          .insert([{ 
-            name: s.name, 
-            shift: s.shift
-          }])
-          .select()
-          .single();
-        
-        if (sErr) throw sErr;
-
-        const sectorInserts = s.sectors.map(name => ({
-          name,
-          staff_id: staffMember.id
-        }));
-
-        const { error: secErr } = await supabase.from('sectors').insert(sectorInserts);
-        if (secErr) throw secErr;
-      }
-
-      alert("Dados da planilha carregados com sucesso!");
-      fetchData();
-    } catch (err: any) {
-      alert("Erro ao carregar dados: " + err.message);
-    } finally {
-      setIsSeeding(false);
-    }
-  };
-
   const addStaff = async () => {
     if (!newStaffName) return;
+    setDbError(null);
     const { error } = await supabase.from('staff').insert([{ 
       name: newStaffName, 
       shift: newStaffShift
     }]);
-    if (!error) {
+    if (error) {
+      setDbError("Erro ao adicionar funcionária: " + error.message);
+      console.error(error);
+    } else {
       setNewStaffName("");
       fetchData();
     }
@@ -150,17 +107,26 @@ export const Dashboard: React.FC = () => {
 
   const deleteStaff = async (id: number) => {
     if (!confirm("Excluir funcionária e todos os seus setores vinculados?")) return;
+    setDbError(null);
     const { error } = await supabase.from('staff').delete().eq('id', id);
-    if (!error) fetchData();
+    if (error) {
+      setDbError("Erro ao excluir funcionária: " + error.message);
+    } else {
+      fetchData();
+    }
   };
 
   const addSector = async () => {
     if (!newSectorName || !selectedStaffForSector) return;
+    setDbError(null);
     const { error } = await supabase.from('sectors').insert([{ 
       name: newSectorName, 
       staff_id: selectedStaffForSector
     }]);
-    if (!error) {
+    if (error) {
+      setDbError("Erro ao adicionar setor: " + error.message);
+      console.error(error);
+    } else {
       setNewSectorName("");
       fetchData();
     }
@@ -168,8 +134,13 @@ export const Dashboard: React.FC = () => {
 
   const deleteSector = async (id: number) => {
     if (!confirm("Excluir este setor?")) return;
+    setDbError(null);
     const { error } = await supabase.from('sectors').delete().eq('id', id);
-    if (!error) fetchData();
+    if (error) {
+      setDbError("Erro ao excluir setor: " + error.message);
+    } else {
+      fetchData();
+    }
   };
 
   const toggleMissed = async (sectorId: number) => {
@@ -458,22 +429,6 @@ export const Dashboard: React.FC = () => {
               </div>
 
               <div className="p-8 overflow-y-auto space-y-12">
-                {/* Carga Inicial */}
-                <section className="p-6 bg-indigo-50 rounded-[2rem] border border-indigo-100">
-                  <h3 className="text-sm font-black text-indigo-900 mb-2 flex items-center gap-2">
-                    <Database size={16} /> Carga Inicial de Dados
-                  </h3>
-                  <p className="text-xs text-indigo-700 mb-4 font-medium leading-relaxed">Clique no botão abaixo para alimentar o banco de dados automaticamente com a equipe e os setores da planilha.</p>
-                  <button 
-                    onClick={seedDatabase}
-                    disabled={isSeeding}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black py-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
-                  >
-                    {isSeeding ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus size={18} />}
-                    <span>Alimentar Banco com Planilha</span>
-                  </button>
-                </section>
-
                 {/* Staff Management */}
                 <section>
                   <div className="flex items-center justify-between mb-6">
