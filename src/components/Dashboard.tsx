@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  LogOut, User, Eye, Plus, Trash2, MapPin, 
+  User, Eye, Plus, Trash2, MapPin, 
   AlertCircle, CheckCircle2, Settings, X, Calendar, Clock, Sun, Moon, Search, Database
 } from 'lucide-react';
 
@@ -23,11 +23,7 @@ interface MissedVisit {
   visit_date: string;
 }
 
-interface DashboardProps {
-  user: any;
-}
-
-export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+export const Dashboard: React.FC = () => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [missedToday, setMissedToday] = useState<number[]>([]);
@@ -73,7 +69,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       setMissedMonth(missedMonthData || []);
 
     } catch (err: any) {
-      setDbError(err.message || "Erro de conexão com o banco de dados.");
+      let message = err.message || "Erro de conexão com o banco de dados.";
+      if (message.includes("Failed to fetch")) {
+        message = "Não foi possível conectar ao Supabase. Verifique se a URL e a Chave Anon estão corretas e se o projeto não está pausado.";
+      }
+      setDbError(message);
       console.error(err);
     } finally {
       setLoading(false);
@@ -85,7 +85,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    // Auth removed
   };
 
   const seedDatabase = async () => {
@@ -111,8 +111,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           .from('staff')
           .insert([{ 
             name: s.name, 
-            shift: s.shift,
-            user_id: user.id 
+            shift: s.shift
           }])
           .select()
           .single();
@@ -121,8 +120,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
         const sectorInserts = s.sectors.map(name => ({
           name,
-          staff_id: staffMember.id,
-          user_id: user.id
+          staff_id: staffMember.id
         }));
 
         const { error: secErr } = await supabase.from('sectors').insert(sectorInserts);
@@ -142,8 +140,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     if (!newStaffName) return;
     const { error } = await supabase.from('staff').insert([{ 
       name: newStaffName, 
-      shift: newStaffShift,
-      user_id: user.id 
+      shift: newStaffShift
     }]);
     if (!error) {
       setNewStaffName("");
@@ -153,7 +150,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   const deleteStaff = async (id: number) => {
     if (!confirm("Excluir funcionária e todos os seus setores vinculados?")) return;
-    const { error } = await supabase.from('staff').delete().eq('id', id).eq('user_id', user.id);
+    const { error } = await supabase.from('staff').delete().eq('id', id);
     if (!error) fetchData();
   };
 
@@ -161,8 +158,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     if (!newSectorName || !selectedStaffForSector) return;
     const { error } = await supabase.from('sectors').insert([{ 
       name: newSectorName, 
-      staff_id: selectedStaffForSector,
-      user_id: user.id
+      staff_id: selectedStaffForSector
     }]);
     if (!error) {
       setNewSectorName("");
@@ -172,7 +168,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   const deleteSector = async (id: number) => {
     if (!confirm("Excluir este setor?")) return;
-    const { error } = await supabase.from('sectors').delete().eq('id', id).eq('user_id', user.id);
+    const { error } = await supabase.from('sectors').delete().eq('id', id);
     if (!error) fetchData();
   };
 
@@ -184,15 +180,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       await supabase.from('missed_visits')
         .delete()
         .eq('sector_id', sectorId)
-        .eq('visit_date', today)
-        .eq('user_id', user.id);
+        .eq('visit_date', today);
       setMissedToday(prev => prev.filter(id => id !== sectorId));
       setMissedMonth(prev => prev.filter(m => !(m.sector_id === sectorId && m.visit_date === today)));
     } else {
       await supabase.from('missed_visits').insert([{ 
         sector_id: sectorId, 
-        visit_date: today,
-        user_id: user.id
+        visit_date: today
       }]);
       setMissedToday(prev => [...prev, sectorId]);
       setMissedMonth(prev => [...prev, { sector_id: sectorId, visit_date: today }]);
@@ -264,13 +258,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
               title="Configurações"
             >
               <Settings size={22} />
-            </button>
-            <button 
-              onClick={handleSignOut} 
-              className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-              title="Sair"
-            >
-              <LogOut size={22} />
             </button>
           </div>
         </div>
