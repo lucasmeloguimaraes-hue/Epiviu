@@ -226,16 +226,20 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Epiviu</h1>
-              <div className="relative">
+              <div className="relative group mt-1">
                 <input 
                   type="date" 
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                  className="absolute inset-0 opacity-0 cursor-pointer z-20 w-full h-full"
+                  title="Clique para selecionar outra data"
                 />
-                <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1 uppercase tracking-widest hover:text-indigo-600 transition-colors cursor-pointer">
-                  <Calendar size={10} /> {displayDateStr}
-                </p>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 group-hover:border-indigo-300 group-hover:bg-indigo-50 transition-all cursor-pointer shadow-sm">
+                  <Calendar size={12} className="text-indigo-600" />
+                  <span className="text-[10px] text-slate-600 font-black uppercase tracking-widest">
+                    {displayDateStr}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
