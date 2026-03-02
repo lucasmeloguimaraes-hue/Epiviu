@@ -28,6 +28,7 @@ export const Dashboard: React.FC = () => {
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [missedToday, setMissedToday] = useState<number[]>([]);
   const [missedMonth, setMissedMonth] = useState<MissedVisit[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedShift, setSelectedShift] = useState<'morning' | 'afternoon'>('morning');
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -50,27 +51,31 @@ export const Dashboard: React.FC = () => {
       const { data: sectorsData } = await supabase.from('sectors').select('*').order('name');
       setSectors(sectorsData || []);
 
-      const today = new Date().toISOString().split('T')[0];
-      const { data: missedTodayData } = await supabase
+      const { data: missedSelectedData } = await supabase
         .from('missed_visits')
         .select('sector_id')
-        .eq('visit_date', today);
-      setMissedToday(missedTodayData?.map(m => m.sector_id) || []);
+        .eq('visit_date', selectedDate);
+      setMissedToday(missedSelectedData?.map(m => m.sector_id) || []);
 
-      // Monthly data
-      const firstDay = new Date();
-      firstDay.setDate(1);
+      // Monthly data based on the selected date's month
+      const dateObj = new Date(selectedDate + 'T12:00:00');
+      const firstDay = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
       const firstDayStr = firstDay.toISOString().split('T')[0];
+      
+      const lastDay = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
+      const lastDayStr = lastDay.toISOString().split('T')[0];
+
       const { data: missedMonthData } = await supabase
         .from('missed_visits')
         .select('sector_id, visit_date')
-        .gte('visit_date', firstDayStr);
+        .gte('visit_date', firstDayStr)
+        .lte('visit_date', lastDayStr);
       setMissedMonth(missedMonthData || []);
 
     } catch (err: any) {
       let message = err.message || "Erro de conexão com o banco de dados.";
       if (message.includes("Failed to fetch")) {
-        message = "Não foi possível conectar ao Supabase. Verifique se a URL e a Chave Anon estão corretas e se o projeto não está pausado.";
+        message = "Não foi possível conectar ao Supabase. Isso geralmente acontece se o projeto estiver pausado ou se as chaves API expiraram. Verifique o painel do Supabase.";
       } else if (message.includes("relation") && message.includes("does not exist")) {
         message = "As tabelas não foram encontradas no banco de dados. Por favor, execute o script SQL de configuração no SQL Editor do seu Supabase.";
       }
@@ -83,7 +88,7 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedDate]);
 
   const handleSignOut = async () => {
     // Auth removed
@@ -145,22 +150,27 @@ export const Dashboard: React.FC = () => {
 
   const toggleMissed = async (sectorId: number) => {
     const today = new Date().toISOString().split('T')[0];
+    if (selectedDate !== today) {
+      alert("Não é permitido alterar registros de datas passadas ou futuras. Selecione a data de hoje para editar.");
+      return;
+    }
+    
     const isMissed = missedToday.includes(sectorId);
 
     if (isMissed) {
       await supabase.from('missed_visits')
         .delete()
         .eq('sector_id', sectorId)
-        .eq('visit_date', today);
+        .eq('visit_date', selectedDate);
       setMissedToday(prev => prev.filter(id => id !== sectorId));
-      setMissedMonth(prev => prev.filter(m => !(m.sector_id === sectorId && m.visit_date === today)));
+      setMissedMonth(prev => prev.filter(m => !(m.sector_id === sectorId && m.visit_date === selectedDate)));
     } else {
       await supabase.from('missed_visits').insert([{ 
         sector_id: sectorId, 
-        visit_date: today
+        visit_date: selectedDate
       }]);
       setMissedToday(prev => [...prev, sectorId]);
-      setMissedMonth(prev => [...prev, { sector_id: sectorId, visit_date: today }]);
+      setMissedMonth(prev => [...prev, { sector_id: sectorId, visit_date: selectedDate }]);
     }
   };
 
@@ -178,8 +188,9 @@ export const Dashboard: React.FC = () => {
 
   const filteredStaff = staff.filter(s => s.shift === selectedShift);
 
-  const todayStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-  const currentMonthName = new Date().toLocaleDateString('pt-BR', { month: 'long' });
+  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+  const displayDateStr = new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const currentMonthName = new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long' });
 
   // Summary calculations
   const totalSectorsCount = sectors.length;
@@ -187,8 +198,9 @@ export const Dashboard: React.FC = () => {
   const visitedTodayCount = totalSectorsCount - missedTodayCount;
 
   // Monthly summary
-  const daysInMonthSoFar = new Set(missedMonth.map(m => m.visit_date)).size || 1;
-  const totalPotentialVisits = totalSectorsCount * daysInMonthSoFar;
+  const dateObj = new Date(selectedDate + 'T12:00:00');
+  const daysInMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate();
+  const totalPotentialVisits = totalSectorsCount * daysInMonth;
   const totalMissedMonth = missedMonth.length;
   const totalVisitedMonth = Math.max(0, totalPotentialVisits - totalMissedMonth);
 
@@ -214,9 +226,17 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Epiviu</h1>
-              <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1 uppercase tracking-widest">
-                <Calendar size={10} /> {todayStr}
-              </p>
+              <div className="relative">
+                <input 
+                  type="date" 
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                />
+                <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1 uppercase tracking-widest hover:text-indigo-600 transition-colors cursor-pointer">
+                  <Calendar size={10} /> {displayDateStr}
+                </p>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -239,6 +259,21 @@ export const Dashboard: React.FC = () => {
               <p className="font-bold">Erro de Banco de Dados</p>
               <p className="text-sm opacity-90">{dbError}</p>
             </div>
+          </div>
+        )}
+
+        {!isToday && (
+          <div className="mb-8 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-center justify-between text-amber-800">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5" />
+              <p className="text-sm font-bold">Você está visualizando um dia anterior. Alterações não são permitidas.</p>
+            </div>
+            <button 
+              onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+              className="text-xs font-black uppercase tracking-widest bg-amber-200/50 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Voltar para hoje
+            </button>
           </div>
         )}
 
@@ -289,7 +324,7 @@ export const Dashboard: React.FC = () => {
                     <div>
                       <h3 className="font-black text-slate-800 text-lg">{person.name}</h3>
                       <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
-                        {person.shift === 'oncall' ? 'Plantonista' : person.shift === 'morning' ? 'Turno Manhã' : 'Turno Tarde'}
+                        {person.shift === 'morning' ? 'Turno Manhã' : 'Turno Tarde'}
                       </p>
                     </div>
                   </div>
@@ -315,8 +350,8 @@ export const Dashboard: React.FC = () => {
                         </div>
                         <div className="flex-shrink-0">
                           {isMissed ? (
-                            <div className="bg-rose-500 text-white p-1 rounded-full shadow-lg shadow-rose-200">
-                              <AlertCircle size={20} />
+                            <div className={`p-1 rounded-full shadow-lg ${!isToday ? 'bg-rose-400' : 'bg-rose-500 shadow-rose-200'}`}>
+                              <AlertCircle size={20} className="text-white" />
                             </div>
                           ) : (
                             <div className="bg-slate-50 text-slate-200 p-1 rounded-full group-hover:bg-indigo-50 group-hover:text-indigo-200 transition-colors">
@@ -342,7 +377,7 @@ export const Dashboard: React.FC = () => {
               <div className="p-2 bg-indigo-500/20 rounded-xl text-indigo-400">
                 <Clock size={20} />
               </div>
-              Resumo do Dia
+              Resumo do Dia ({new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})
             </h3>
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
